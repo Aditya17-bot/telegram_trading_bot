@@ -1,36 +1,44 @@
 # =============================================================================
-# config.py — All your settings. Edit this before running anything.
-# No Kite API needed. No static IP needed. Just Python + internet.
+# config.py — Settings. On Streamlit Cloud, secrets override these values.
+# Telegram credentials are loaded from st.secrets (never hardcode them here).
 # =============================================================================
+import os
 
-# --- Telegram Bot ---
-# Full setup guide is in README.md — takes about 2 minutes.
-TELEGRAM_BOT_TOKEN = "8699283942:AAHSq_Po_gLBY_OqbsWI6eNe5LEWjh3n4k8"   # from @BotFather on Telegram
-TELEGRAM_CHAT_ID   = "8064531676"     # your personal chat ID
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# --- Try loading from Streamlit secrets first, fall back to env vars ---
+def _get(key, default=""):
+    try:
+        import streamlit as st
+        return st.secrets.get(key, os.environ.get(key, default))
+    except Exception:
+        return os.environ.get(key, default)
+
+TELEGRAM_BOT_TOKEN = _get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID   = _get("TELEGRAM_CHAT_ID")
 
 # --- Capital & Risk ---
-# Used only for the position size suggestion in the notification message.
-CAPITAL          = 3000   # Your actual capital in rupees
-LEVERAGE         = 5      # MIS intraday leverage on Zerodha
-RISK_PER_TRADE   = 0.02   # Risk 2% of effective capital per trade
-
-# --- How many signals to send per day ---
+CAPITAL          = 5000
+LEVERAGE         = 5
+RISK_PER_TRADE   = 0.02
 MAX_SIGNALS_PER_DAY = 2
 
 # --- Strategy Parameters ---
-STOP_LOSS_PCT      = 0.005   # 0.5% stop loss from entry price
-TARGET_RR          = 2.0     # Risk:Reward — target = SL distance × this
-VOLUME_MULTIPLIER  = 1.5     # Breakout candle volume must be > 1.5x 20-day average
-PULLBACK_PCT       = 0.002   # Wait for 0.2% pullback after breakout before signalling
-EMA_PERIOD         = 20      # EMA used for trend filter on bull breaks
+STOP_LOSS_PCT      = 0.005
+TARGET_RR          = 2.0
+VOLUME_MULTIPLIER  = 1.5
+PULLBACK_PCT       = 0.002
+EMA_PERIOD         = 20
 
 # --- Timing ---
 SCAN_INTERVAL_SECONDS = 60
 TRADE_START_TIME      = "09:30"
-SIGNAL_CUTOFF_TIME    = "14:30"  # Stop sending signals after this
+SIGNAL_CUTOFF_TIME    = "14:30"
 MARKET_CLOSE_TIME     = "15:30"
 
-# --- Nifty 50 symbols (NSE codes) ---
+# --- Nifty 50 ---
 NIFTY50_SYMBOLS = [
     "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
     "HINDUNILVR", "SBIN", "BAJFINANCE", "BHARTIARTL", "KOTAKBANK",
@@ -44,5 +52,4 @@ NIFTY50_SYMBOLS = [
     "HDFCLIFE", "BAJAJ-AUTO", "UPL", "ADANIPORTS", "ITC",
 ]
 
-# --- Logging ---
 LOG_FILE = "scanner.log"

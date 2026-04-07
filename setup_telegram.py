@@ -1,6 +1,6 @@
 # =============================================================================
 # setup_telegram.py — Run this ONCE to find your Telegram Chat ID.
-# After running, copy the chat_id into config.py.
+# After running, copy the values into your local .env file.
 # =============================================================================
 
 import requests
@@ -50,9 +50,9 @@ print(f"  Found! Hello, {username}!")
 print(f"  Your Chat ID: {chat_id}")
 print("=" * 50)
 print()
-print("Now add these to config.py:")
-print(f'  TELEGRAM_BOT_TOKEN = "{token}"')
-print(f'  TELEGRAM_CHAT_ID   = "{chat_id}"')
+print("Now add these to your local .env file:")
+print(f"  TELEGRAM_BOT_TOKEN={token}")
+print(f"  TELEGRAM_CHAT_ID={chat_id}")
 print()
 
 # Test it
