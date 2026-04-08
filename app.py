@@ -249,33 +249,57 @@ def do_scan():
 def start_scanner():
     add_log("Starting scanner...", "info")
 
-    # Verify Telegram
-    ok = test_notification()
+    # --- Step 1: Check credentials are actually set ---
+    token = TELEGRAM_BOT_TOKEN
+    chat  = TELEGRAM_CHAT_ID
+    if not token or token == "your_bot_token_here":
+        msg = ("TELEGRAM_BOT_TOKEN missing. Go to Streamlit Cloud → app → ⋮ → Settings → Secrets")
+        add_log(msg, "error")
+        st.error(f"❌ {msg}")
+        return
+    if not chat or chat == "your_chat_id_here":
+        msg = ("TELEGRAM_CHAT_ID missing. Go to Streamlit Cloud → app → ⋮ → Settings → Secrets")
+        add_log(msg, "error")
+        st.error(f"❌ {msg}")
+        return
+
+    # --- Step 2: Test Telegram ---
+    with st.spinner("Testing Telegram connection..."):
+        ok = test_notification()
     st.session_state.tg_ok = ok
     if not ok:
-        add_log("Telegram test FAILED — check secrets", "error")
+        msg = (f"Telegram FAILED. Token prefix: {token[:12]}... — check token and chat ID in Secrets.")
+        add_log(msg, "error")
+        st.error(f"❌ {msg}")
         return
+    add_log("Telegram OK ✓", "success")
 
-    # Fetch levels
-    with st.spinner("Fetching PDH/PDL levels for all 50 stocks..."):
-        levels = fetch_previous_day_levels(NIFTY50_SYMBOLS)
+    # --- Step 3: Fetch levels ---
+    with st.spinner("Fetching PDH/PDL for 50 stocks (30–60s)..."):
+        try:
+            levels = fetch_previous_day_levels(NIFTY50_SYMBOLS)
+        except Exception as e:
+            msg = f"Fetch failed: {e}"
+            add_log(msg, "error")
+            st.error(f"❌ {msg}")
+            return
 
     if not levels:
-        add_log("Failed to fetch levels — check internet", "error")
+        msg = "No levels returned — yfinance may be down."
+        add_log(msg, "error")
+        st.error(f"❌ {msg}")
         return
 
-    st.session_state.levels = levels
-    st.session_state.engine = SignalEngine(
-        {s: levels[s] for s in NIFTY50_SYMBOLS if s in levels}
-    )
-    st.session_state.signals = []
-    st.session_state.scan_count = 0
-    st.session_state.log = []
+    # --- Step 4: Arm the scanner ---
+    st.session_state.levels  = levels
+    st.session_state.engine  = SignalEngine({s: levels[s] for s in NIFTY50_SYMBOLS if s in levels})
+    st.session_state.signals      = []
+    st.session_state.scan_count   = 0
+    st.session_state.log          = []
     st.session_state.morning_sent = False
-    st.session_state.eod_sent = False
-    st.session_state.running = True
+    st.session_state.eod_sent     = False
+    st.session_state.running      = True
 
-    # Morning summary
     send_morning_summary(levels)
     st.session_state.morning_sent = True
     add_log(f"Levels loaded for {len(levels)} stocks. Morning summary sent.", "success")
@@ -289,6 +313,24 @@ def stop_scanner():
         st.session_state.eod_sent = True
     add_log("Scanner stopped.", "warning")
 
+
+# =============================================================================
+# UI — Credential check banner (shows immediately if secrets are missing)
+# =============================================================================
+_token_ok = bool(TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_TOKEN != "your_bot_token_here")
+_chat_ok  = bool(TELEGRAM_CHAT_ID   and TELEGRAM_CHAT_ID   != "your_chat_id_here")
+
+if not _token_ok or not _chat_ok:
+    st.error(
+        """❌ **Telegram secrets not configured.**
+        
+Go to: **Streamlit Cloud → your app → ⋮ (top-right) → Settings → Secrets**
+
+Paste exactly this (with your real values):
+
+Then click **Save** — the app will restart automatically."""
+    )
+    st.stop()   # Don't render rest of the app until secrets are set
 
 # =============================================================================
 # UI — Header
